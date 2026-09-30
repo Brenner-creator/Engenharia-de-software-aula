@@ -1,14 +1,18 @@
-import { Router } from 'express';
-import { CategoriaController } from '../controllers/categoria.controller';
-import { authMiddleware } from '../middlewares/auth';
+import { Router } from "express";
+import { CategoriaController } from "@/controllers/categoria.controller";
+import { authenticate, authorize } from "@/middlewares/auth";
+import { UserRole } from "@/types";
 
-const categoriaRoutes = Router();
+const router = Router();
+
 const categoriaController = new CategoriaController();
 
-categoriaRoutes.post('/', authMiddleware, categoriaController.create);
-categoriaRoutes.get('/', categoriaController.findAll);
-categoriaRoutes.get('/:id', categoriaController.findById);
-categoriaRoutes.put('/:id', authMiddleware, categoriaController.update);
-categoriaRoutes.delete('/:id', authMiddleware, categoriaController.delete);
+// router.use(authenticate); // Descomente para proteger todas as rotas com autenticação
 
-export default categoriaRoutes;
+router.get("/", categoriaController.getAllCategorias);
+router.get("/:id", categoriaController.getCategoriaById);
+router.post("/", categoriaController.createCategoria);
+router.put("/:id", categoriaController.updateCategoria);
+router.delete("/:id", categoriaController.deleteCategoria);
+
+export default router;
