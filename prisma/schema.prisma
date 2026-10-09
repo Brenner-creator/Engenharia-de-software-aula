@@ -13,6 +13,8 @@ model User {
   email     String   @unique
   password  String   
   roles     Role[]   @relation("users_roles")
+  movimentacoesEstoque MovimentacaoEstoque[]
+  passwordResetTokens PasswordResetToken[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -67,12 +69,56 @@ model Role {
   @@map("roles")
 }
 
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId, expiresAt])
+  @@map("password_reset_tokens")
+}
+
 model Categoria {
   id        String   @id @default(uuid())
   nome      String
   descricao String?
+  produtos  Produto[]
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("categorias")
+}
+
+model Produto {
+  id              String   @id @default(uuid())
+  nome            String
+  sku             String   @unique
+  descricao       String?
+  preco           Decimal  @db.Decimal(10, 2)
+  quantidade      Int      @default(0)
+  estoqueMinimo   Int      @default(5)
+  categoriaId     String
+  categoria       Categoria @relation(fields: [categoriaId], references: [id])
+  movimentacoes   MovimentacaoEstoque[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("produtos")
+}
+
+model MovimentacaoEstoque {
+  id          String   @id @default(uuid())
+  produtoId   String
+  produto     Produto  @relation(fields: [produtoId], references: [id])
+  usuarioId   String
+  usuario     User     @relation(fields: [usuarioId], references: [id])
+  tipo        String
+  quantidade  Int
+  observacao  String?
+  createdAt   DateTime @default(now())
+
+  @@map("movimentacoes_estoque")
 }

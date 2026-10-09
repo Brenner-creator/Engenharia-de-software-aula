@@ -8,22 +8,48 @@ export class AuthController {
     this.authService = new AuthService();
   }
 
-  public login = async (req: Request, res: Response): Promise<void> => {
+  public login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { email, password }  = req.body as LoginInput;
-      const { token, user } = await this.authService.login({ email, password });
+      const { token, user } = await this.authService.login(req.body as LoginInput);
       res.json({ token, user });
     } catch (error) {
-      res.status(401).json(error);
+      next(error);
     }
   };
 
-  public me = async (req: Request, res: Response): Promise<void> => {
+  public register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const result = await this.authService.register(req.body);
+      res.status(201).json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public forgotPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      await this.authService.requestPasswordReset(req.body);
+      res.status(202).json({ message: "Se houver uma conta com esse e-mail, enviaremos um link de recuperação." });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public resetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      await this.authService.resetPassword(req.body);
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public me = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const user = await this.authService.me(req.user!.id);
       res.json(user);
     } catch (error) {
-      res.status(404).json(error);
+      next(error);
     }
   }
 }

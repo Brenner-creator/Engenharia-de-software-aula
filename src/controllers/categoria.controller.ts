@@ -10,12 +10,11 @@ export class CategoriaController {
 
   public getAllCategorias = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { page, limit, q, orderBy } = req.query as any;
+      const { page, limit, q } = req.pagination ?? { page: 1, limit: 10 };
       const categorias = await this.categoriaService.getAllCategorias({
-        page: Number(page),
-        limit: Number(limit),
-        where: q,
-        orderBy,
+        page,
+        limit,
+        ...(q !== undefined && { q }),
       });
       res.status(200).json(categorias);
     } catch (error) {

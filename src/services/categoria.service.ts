@@ -16,19 +16,18 @@ export class CategoriaService {
   public async getAllCategorias(params: {
     page?: number;
     limit?: number;
-    where?: Partial<Categoria>;
+    q?: string;
     orderBy?: { [key: string]: 'asc' | 'desc' };
   }): Promise<Categoria[]> {
     const { page = 1, limit = 10 } = params;
     const skip = (page - 1) * limit || 0;
 
-    const where = params.where
+    const where = params.q
       ? {
-          OR: Object.entries(params.where)
-            .filter(([_, value]) => value !== undefined && value !== null)
-            .map(([key, value]) => ({
-              [key]: { contains: String(value), mode: Prisma.QueryMode.insensitive },
-            })),
+          OR: [
+            { nome: { contains: params.q, mode: Prisma.QueryMode.insensitive } },
+            { descricao: { contains: params.q, mode: Prisma.QueryMode.insensitive } },
+          ],
         }
       : {};
 

@@ -2,6 +2,15 @@ import jwt from 'jsonwebtoken';
 
 import { AuthUser, UserRole } from '../types/index';
 
+function getSecretKey(): string {
+    const secretKey = process.env.JWT_SECRET;
+    if (secretKey && secretKey.length >= 32) return secretKey;
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error('JWT_SECRET must contain at least 32 characters in production');
+    }
+    return 'local-development-only-secret-do-not-deploy';
+}
+
 export type JwtPayload = {
     sub: string;
     email: string;
@@ -17,7 +26,7 @@ export function signToken(
         roles: user.roles,
     };
 
-    const secretKey = process.env.JWT_SECRET || 'default_secret_key';
+    const secretKey = getSecretKey();
     const options = {
         expiresIn: Number(process.env.JWT_EXPIRES_IN) || 3600,
     };
@@ -26,7 +35,7 @@ export function signToken(
 }
 
 export function verifyToken(token: string): JwtPayload {
-    const secretKey = process.env.JWT_SECRET || 'default_secret_key';
+    const secretKey = getSecretKey();
     const decoded = jwt.verify(token, secretKey) as JwtPayload;
     if (
         typeof decoded === 'string' 

@@ -7,12 +7,12 @@ const router = Router();
 
 const categoriaController = new CategoriaController();
 
-// router.use(authenticate); // Descomente para proteger todas as rotas com autenticação
+router.use(authenticate);
 
 router.get("/", categoriaController.getAllCategorias);
 router.get("/:id", categoriaController.getCategoriaById);
-router.post("/", categoriaController.createCategoria);
-router.put("/:id", categoriaController.updateCategoria);
-router.delete("/:id", categoriaController.deleteCategoria);
+router.post("/", authorize(UserRole.ADMIN), categoriaController.createCategoria);
+router.put("/:id", authorize(UserRole.ADMIN), categoriaController.updateCategoria);
+router.delete("/:id", authorize(UserRole.ADMIN), categoriaController.deleteCategoria);
 
 export default router;

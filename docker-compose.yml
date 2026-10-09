@@ -4,15 +4,15 @@ services:
     image: postgis/postgis:15-3.4-alpine
     container_name: postgres
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=prog-2
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: StockHub
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d prog-2"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d StockHub"]
       interval: 1m30s
       timeout: 30s
       retries: 5
@@ -29,5 +29,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 volumes:
   postgres_data:

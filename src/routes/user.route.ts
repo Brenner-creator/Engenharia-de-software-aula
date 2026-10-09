@@ -8,7 +8,7 @@ import { authenticate, authorize } from "@/middlewares/auth";
 const router = Router();
 
 const userController = new UserController();
-// router.use(authenticate);
+router.use(authenticate, authorize(UserRole.ADMIN));
 
 router.get("/", userController.getAllUsers);
 router.get("/:id", userController.getUserById);

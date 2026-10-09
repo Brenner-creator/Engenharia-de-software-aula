@@ -18,18 +18,19 @@ export class UserService {
   public async getAllUsers(params: {
     page?: number;
     limit?: number;
-    where?: Partial<User>;
+    q?: string;
     orderBy?: { [key: string]: 'asc' | 'desc' };
   }): Promise<any> {
     const { page = 1, limit = 10 } = params;
     const skip = (page - 1) * limit || 0;
-    const where = params.where ?
-    {
-        OR: Object.entries(params.where).map(([key, value]) => ({
-            [key]: { contains: value, mode: Prisma.QueryMode.insensitive },
-        })),
-    }
-    : {};
+    const where: Prisma.UserWhereInput = params.q
+      ? {
+          OR: [
+            { name: { contains: params.q, mode: Prisma.QueryMode.insensitive } },
+            { email: { contains: params.q, mode: Prisma.QueryMode.insensitive } },
+          ],
+        }
+      : {};
     const orderBy = params.orderBy
       ? Object.entries(params.orderBy).map(([key, value]) => ({
           [key]: value === 'asc' ? 'asc' as const : 'desc' as const,
@@ -47,11 +48,13 @@ export class UserService {
     return usersWithoutPasswords;
   }
 
-  public async getUserById(id: string): Promise<User | null> {
+  public async getUserById(id: string): Promise<Omit<User, "password"> | null> {
     const user = await prisma.user.findUnique({
       where: { id },
     });
-    return user;
+    if (!user) return null;
+    const { password, ...safeUser } = user;
+    return safeUser;
   }
 
     public async createUser(
@@ -77,10 +80,12 @@ export class UserService {
       where: { id },
       data: {
         ...userData,
+        ...(userData.password && { password: await hashPassword(userData.password) }),
         updatedAt: new Date(),
       },
     });
-    return updatedUser;
+    const { password, ...safeUser } = updatedUser;
+    return safeUser as User;
   }
 
   public async deleteUser(id: string): Promise<boolean> {
