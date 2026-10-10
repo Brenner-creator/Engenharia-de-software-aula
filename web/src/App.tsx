@@ -17,6 +17,7 @@ import {
   RefreshCw,
   Search,
   ShieldCheck,
+  Tags,
   X,
 } from 'lucide-react';
 
@@ -47,7 +48,7 @@ type Movement = {
   produtoId?: string;
   produto?: { id: string; nome: string; sku: string };
 };
-type View = 'overview' | 'products' | 'movements';
+type View = 'overview' | 'products' | 'movements' | 'categories';
 type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
 type Notice = { kind: 'success' | 'error'; text: string } | null;
 
@@ -184,6 +185,7 @@ export default function App() {
     localStorage.removeItem('stockhub.token');
     localStorage.removeItem('stockhub.user');
     setSession({ token: null, user: null });
+    setView('overview');
     setProducts([]);
     setMovements([]);
     setMetrics(emptyMetrics);
@@ -427,8 +429,14 @@ export default function App() {
     );
   }
 
-  const title = view === 'overview' ? 'Visão geral' : view === 'products' ? 'Produtos' : 'Movimentações';
   const canManageCategories = session.user?.roles?.includes('ADMIN') ?? false;
+  const title = view === 'overview'
+    ? 'Visão geral'
+    : view === 'products'
+      ? 'Produtos'
+      : view === 'categories'
+        ? 'Categorias'
+        : 'Movimentações';
 
   return (
     <div className="app-shell">
@@ -441,6 +449,7 @@ export default function App() {
           <button className={view === 'overview' ? 'nav-item active' : 'nav-item'} onClick={() => setView('overview')}><ChartNoAxesCombined size={18} /> Visão geral</button>
           <button className={view === 'products' ? 'nav-item active' : 'nav-item'} onClick={() => setView('products')}><Package size={18} /> Produtos <span className="nav-count">{products.length}</span></button>
           <button className={view === 'movements' ? 'nav-item active' : 'nav-item'} onClick={() => setView('movements')}><ArrowLeftRight size={18} /> Movimentações</button>
+          {canManageCategories && <button className={view === 'categories' ? 'nav-item active' : 'nav-item'} onClick={() => setView('categories')}><Tags size={18} /> Categorias <span className="nav-count">{categories.length}</span></button>}
         </nav>
         <div className="sidebar-bottom">
           <div className="sidebar-status"><span className="status-dot" /><span>Banco conectado</span><Check size={14} /></div>
@@ -508,6 +517,27 @@ export default function App() {
                 <div className="table-scroll"><table><thead><tr><th>PRODUTO</th><th>CATEGORIA</th><th>PREÇO</th><th>QUANTIDADE</th><th>STATUS</th></tr></thead><tbody>
                   {filteredProducts.map((product) => <tr key={product.id}><td><div className="table-product"><span className="product-initial">{product.nome.slice(0, 1).toUpperCase()}</span><span><strong>{product.nome}</strong><small>{product.sku}</small></span></div></td><td>{categories.find((category) => category.id === product.categoriaId)?.nome || 'Sem categoria'}</td><td className="price-cell">{currency(product.preco)}</td><td><strong>{product.quantidade}</strong><span className="unit-label"> un.</span></td><td><StockStatus product={product} /></td></tr>)}
                   {!filteredProducts.length && <tr><td colSpan={5}><EmptyState icon={<Package size={19} />} title={search ? 'Nenhum resultado' : 'Catálogo vazio'} detail={search ? 'Tente outro nome ou SKU.' : 'Cadastre o primeiro produto para começar.'} /></td></tr>}
+                </tbody></table></div>
+              </section>
+            </>
+          )}
+
+          {view === 'categories' && canManageCategories && (
+            <>
+              <section className="page-heading">
+                <div><span className="eyebrow">ORGANIZAÇÃO DO CATÁLOGO</span><h1>Categorias<span className="heading-period">.</span></h1><p>{categories.length} categorias cadastradas</p></div>
+              </section>
+              <section className="panel catalog-panel category-admin-panel">
+                <form className="category-create category-page-form" onSubmit={handleCreateCategory}>
+                  <div className="category-form-title"><Tags size={17} /><strong>Nova categoria</strong></div>
+                  <label>Nome<input name="nome" placeholder="Ex.: Eletrônicos" maxLength={100} required /></label>
+                  <label>Descrição<input name="descricao" placeholder="Descrição (opcional)" maxLength={255} /></label>
+                  <button className="button button-primary" type="submit" disabled={busy}><Plus size={15} />{busy ? 'Salvando...' : 'Cadastrar categoria'}</button>
+                </form>
+                <div className="catalog-toolbar"><div className="toolbar-title"><Tags size={17} /><strong>Categorias cadastradas</strong></div><span className="table-count">{categories.length} registros</span></div>
+                <div className="table-scroll"><table><thead><tr><th>NOME</th><th>DESCRIÇÃO</th><th>PRODUTOS</th></tr></thead><tbody>
+                  {categories.map((category) => <tr key={category.id}><td><strong>{category.nome}</strong></td><td className="category-description">{category.descricao || '—'}</td><td>{products.filter((product) => product.categoriaId === category.id).length}</td></tr>)}
+                  {!categories.length && <tr><td colSpan={3}><EmptyState icon={<Tags size={19} />} title="Nenhuma categoria" detail="Cadastre uma categoria para começar a organizar o catálogo." /></td></tr>}
                 </tbody></table></div>
               </section>
             </>
