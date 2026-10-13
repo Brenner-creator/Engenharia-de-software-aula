@@ -1,4 +1,4 @@
-import { Prisma, Produto } from "@prisma/client";
+import { Prisma, PrismaClient, Produto } from "@prisma/client";
 import { z } from "zod";
 import prisma from "@/lib/prisma";
 import { AppError } from "@/types";
@@ -23,6 +23,8 @@ const paginationSchema = z.object({
 });
 
 export class ProdutoService {
+  constructor(private readonly database: Pick<PrismaClient, "produto"> = prisma) {}
+
   public async getAllProdutos(params: {
     page?: number;
     limit?: number;
@@ -101,7 +103,26 @@ export class ProdutoService {
   }
 
   public async deleteProduto(id: string): Promise<void> {
-    await prisma.produto.delete({ where: { id } });
+    const produto = await this.database.produto.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        movimentacoes: { select: { id: true }, take: 1 },
+      },
+    });
+
+    if (!produto) {
+      throw new AppError("Produto não encontrado", 404);
+    }
+
+    if (produto.movimentacoes.length > 0) {
+      throw new AppError(
+        "Produto possui movimentações registradas e não pode ser excluído",
+        409,
+      );
+    }
+
+    await this.database.produto.delete({ where: { id } });
   }
 
   public async getProdutosLowStock(): Promise<Produto[]> {

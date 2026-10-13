@@ -18,6 +18,7 @@ import {
   Search,
   ShieldCheck,
   Tags,
+  Trash2,
   X,
 } from 'lucide-react';
 
@@ -340,6 +341,34 @@ export default function App() {
     }
   }
 
+  async function handleDeleteProduct(product: Product) {
+    if (!session.token || !window.confirm(`Excluir o produto "${product.nome}"? Esta ação não pode ser desfeita.`)) return;
+    setBusy(true);
+    try {
+      await request<void>(`/produtos/${product.id}`, session.token, { method: 'DELETE' });
+      setNotice({ kind: 'success', text: 'Produto excluído.' });
+      await loadData(session.token);
+    } catch (error) {
+      setNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Falha ao excluir produto.' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteCategory(category: Category) {
+    if (!session.token || !window.confirm(`Excluir a categoria "${category.nome}"? Esta ação não pode ser desfeita.`)) return;
+    setBusy(true);
+    try {
+      await request<void>(`/categorias/${category.id}`, session.token, { method: 'DELETE' });
+      setNotice({ kind: 'success', text: 'Categoria excluída.' });
+      await loadData(session.token);
+    } catch (error) {
+      setNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Falha ao excluir categoria.' });
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleCreateMovement(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!session.token) return;
@@ -429,7 +458,7 @@ export default function App() {
     );
   }
 
-  const canManageCategories = session.user?.roles?.includes('ADMIN') ?? false;
+  const isAdmin = session.user?.roles?.includes('ADMIN') ?? false;
   const title = view === 'overview'
     ? 'Visão geral'
     : view === 'products'
@@ -449,7 +478,7 @@ export default function App() {
           <button className={view === 'overview' ? 'nav-item active' : 'nav-item'} onClick={() => setView('overview')}><ChartNoAxesCombined size={18} /> Visão geral</button>
           <button className={view === 'products' ? 'nav-item active' : 'nav-item'} onClick={() => setView('products')}><Package size={18} /> Produtos <span className="nav-count">{products.length}</span></button>
           <button className={view === 'movements' ? 'nav-item active' : 'nav-item'} onClick={() => setView('movements')}><ArrowLeftRight size={18} /> Movimentações</button>
-          {canManageCategories && <button className={view === 'categories' ? 'nav-item active' : 'nav-item'} onClick={() => setView('categories')}><Tags size={18} /> Categorias <span className="nav-count">{categories.length}</span></button>}
+          {isAdmin && <button className={view === 'categories' ? 'nav-item active' : 'nav-item'} onClick={() => setView('categories')}><Tags size={18} /> Categorias <span className="nav-count">{categories.length}</span></button>}
         </nav>
         <div className="sidebar-bottom">
           <div className="sidebar-status"><span className="status-dot" /><span>Banco conectado</span><Check size={14} /></div>
@@ -514,15 +543,15 @@ export default function App() {
               </section>
               <section className="panel catalog-panel">
                 <div className="catalog-toolbar"><div className="search-field"><Search size={17} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nome ou SKU" aria-label="Buscar produtos" /></div><span className="table-count">{filteredProducts.length} resultados</span></div>
-                <div className="table-scroll"><table><thead><tr><th>PRODUTO</th><th>CATEGORIA</th><th>PREÇO</th><th>QUANTIDADE</th><th>STATUS</th></tr></thead><tbody>
-                  {filteredProducts.map((product) => <tr key={product.id}><td><div className="table-product"><span className="product-initial">{product.nome.slice(0, 1).toUpperCase()}</span><span><strong>{product.nome}</strong><small>{product.sku}</small></span></div></td><td>{categories.find((category) => category.id === product.categoriaId)?.nome || 'Sem categoria'}</td><td className="price-cell">{currency(product.preco)}</td><td><strong>{product.quantidade}</strong><span className="unit-label"> un.</span></td><td><StockStatus product={product} /></td></tr>)}
-                  {!filteredProducts.length && <tr><td colSpan={5}><EmptyState icon={<Package size={19} />} title={search ? 'Nenhum resultado' : 'Catálogo vazio'} detail={search ? 'Tente outro nome ou SKU.' : 'Cadastre o primeiro produto para começar.'} /></td></tr>}
+                <div className="table-scroll"><table><thead><tr><th>PRODUTO</th><th>CATEGORIA</th><th>PREÇO</th><th>QUANTIDADE</th><th>STATUS</th>{isAdmin && <th>AÇÕES</th>}</tr></thead><tbody>
+                  {filteredProducts.map((product) => <tr key={product.id}><td><div className="table-product"><span className="product-initial">{product.nome.slice(0, 1).toUpperCase()}</span><span><strong>{product.nome}</strong><small>{product.sku}</small></span></div></td><td>{categories.find((category) => category.id === product.categoriaId)?.nome || 'Sem categoria'}</td><td className="price-cell">{currency(product.preco)}</td><td><strong>{product.quantidade}</strong><span className="unit-label"> un.</span></td><td><StockStatus product={product} /></td>{isAdmin && <td><button className="icon-button danger" type="button" title="Excluir produto" aria-label={`Excluir produto ${product.nome}`} disabled={busy} onClick={() => void handleDeleteProduct(product)}><Trash2 size={16} /></button></td>}</tr>)}
+                  {!filteredProducts.length && <tr><td colSpan={isAdmin ? 6 : 5}><EmptyState icon={<Package size={19} />} title={search ? 'Nenhum resultado' : 'Catálogo vazio'} detail={search ? 'Tente outro nome ou SKU.' : 'Cadastre o primeiro produto para começar.'} /></td></tr>}
                 </tbody></table></div>
               </section>
             </>
           )}
 
-          {view === 'categories' && canManageCategories && (
+          {view === 'categories' && isAdmin && (
             <>
               <section className="page-heading">
                 <div><span className="eyebrow">ORGANIZAÇÃO DO CATÁLOGO</span><h1>Categorias<span className="heading-period">.</span></h1><p>{categories.length} categorias cadastradas</p></div>
@@ -535,9 +564,9 @@ export default function App() {
                   <button className="button button-primary" type="submit" disabled={busy}><Plus size={15} />{busy ? 'Salvando...' : 'Cadastrar categoria'}</button>
                 </form>
                 <div className="catalog-toolbar"><div className="toolbar-title"><Tags size={17} /><strong>Categorias cadastradas</strong></div><span className="table-count">{categories.length} registros</span></div>
-                <div className="table-scroll"><table><thead><tr><th>NOME</th><th>DESCRIÇÃO</th><th>PRODUTOS</th></tr></thead><tbody>
-                  {categories.map((category) => <tr key={category.id}><td><strong>{category.nome}</strong></td><td className="category-description">{category.descricao || '—'}</td><td>{products.filter((product) => product.categoriaId === category.id).length}</td></tr>)}
-                  {!categories.length && <tr><td colSpan={3}><EmptyState icon={<Tags size={19} />} title="Nenhuma categoria" detail="Cadastre uma categoria para começar a organizar o catálogo." /></td></tr>}
+                <div className="table-scroll"><table><thead><tr><th>NOME</th><th>DESCRIÇÃO</th><th>PRODUTOS</th><th>AÇÕES</th></tr></thead><tbody>
+                  {categories.map((category) => <tr key={category.id}><td><strong>{category.nome}</strong></td><td className="category-description">{category.descricao || '—'}</td><td>{products.filter((product) => product.categoriaId === category.id).length}</td><td><button className="icon-button danger" type="button" title="Excluir categoria" aria-label={`Excluir categoria ${category.nome}`} disabled={busy} onClick={() => void handleDeleteCategory(category)}><Trash2 size={16} /></button></td></tr>)}
+                  {!categories.length && <tr><td colSpan={4}><EmptyState icon={<Tags size={19} />} title="Nenhuma categoria" detail="Cadastre uma categoria para começar a organizar o catálogo." /></td></tr>}
                 </tbody></table></div>
               </section>
             </>
@@ -568,9 +597,9 @@ export default function App() {
         <section className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
           <div className="modal-header"><div><span className="eyebrow">{modal === 'product' ? 'CATÁLOGO' : 'ESTOQUE'}</span><h2 id="modal-title">{modal === 'product' ? 'Novo produto' : 'Nova movimentação'}</h2></div><button className="icon-button" onClick={() => setModal(null)} aria-label="Fechar"><X size={18} /></button></div>
           {modal === 'product' ? <>
-            {categories.length === 0 && !showCategoryForm && <div className="inline-notice"><CircleAlert size={17} /><span>{canManageCategories ? 'Crie uma categoria antes de cadastrar o primeiro produto.' : 'Peça a um administrador para cadastrar a primeira categoria.'}</span>{canManageCategories && <button className="text-link" onClick={() => setShowCategoryForm(true)}>Criar categoria</button>}</div>}
+            {categories.length === 0 && !showCategoryForm && <div className="inline-notice"><CircleAlert size={17} /><span>{isAdmin ? 'Crie uma categoria antes de cadastrar o primeiro produto.' : 'Peça a um administrador para cadastrar a primeira categoria.'}</span>{isAdmin && <button className="text-link" onClick={() => setShowCategoryForm(true)}>Criar categoria</button>}</div>}
             {showCategoryForm && <form className="category-create" onSubmit={handleCreateCategory}><div className="category-form-title"><strong>Nova categoria</strong><button type="button" className="icon-button subtle" onClick={() => setShowCategoryForm(false)} aria-label="Cancelar"><X size={15} /></button></div><label>Nome<input name="nome" placeholder="Ex.: Eletrônicos" required /></label><label>Descrição<input name="descricao" placeholder="Opcional" /></label><button className="button button-outline button-small" type="submit" disabled={busy}>Salvar categoria</button></form>}
-            {categories.length > 0 && !showCategoryForm && canManageCategories && <button className="text-link add-category-link" onClick={() => setShowCategoryForm(true)}><Plus size={14} /> Adicionar categoria</button>}
+            {categories.length > 0 && !showCategoryForm && isAdmin && <button className="text-link add-category-link" onClick={() => setShowCategoryForm(true)}><Plus size={14} /> Adicionar categoria</button>}
             <form className="stack-form modal-form" onSubmit={handleCreateProduct}>
               <div className="form-pair"><label>Nome do produto<input name="nome" placeholder="Ex.: Teclado mecânico" required /></label><label>SKU<input name="sku" placeholder="Ex.: PER-KEY-001" required /></label></div>
               <label>Categoria<select name="categoriaId" required defaultValue=""><option value="" disabled>Selecione uma categoria</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.nome}</option>)}</select></label>

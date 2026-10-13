@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import { Categoria, CategoriaService } from '@/services/categoria.service';
+import { AppError } from '@/types';
 
 export class CategoriaController {
   private categoriaService: CategoriaService;
@@ -71,7 +73,21 @@ export class CategoriaController {
         res.status(404).json({ message: 'Category not found' });
       }
     } catch (error) {
-      res.status(500).json({ message: 'Error deleting category', error });
+      if (error instanceof AppError) {
+        res.status(error.statusCode).json({ message: error.message });
+        return;
+      }
+      if (error instanceof Prisma.PrismaClientKnownRequestError) {
+        if (error.code === 'P2003') {
+          res.status(409).json({ message: 'Categoria possui produtos vinculados e não pode ser excluída' });
+          return;
+        }
+        if (error.code === 'P2025') {
+          res.status(404).json({ message: 'Categoria não encontrada' });
+          return;
+        }
+      }
+      res.status(500).json({ message: 'Erro interno ao excluir categoria' });
     }
   };
 }

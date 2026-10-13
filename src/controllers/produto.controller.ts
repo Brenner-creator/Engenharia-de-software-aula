@@ -102,6 +102,15 @@ export class ProdutoController {
       await this.produtoService.deleteProduto(req.params.id as string);
       res.status(204).send();
     } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2003"
+      ) {
+        res.status(409).json({
+          message: "Produto possui movimentações registradas e não pode ser excluído",
+        });
+        return;
+      }
       this.handleError(error, res);
     }
   };

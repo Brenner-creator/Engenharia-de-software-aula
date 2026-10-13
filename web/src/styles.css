@@ -61,6 +61,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .icon-button { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; color: #617068; background: transparent; border: 1px solid transparent; border-radius: 6px; transition: background .16s ease, border-color .16s ease; }
 .icon-button:hover { background: #f1f5f0; border-color: var(--line); }
 .icon-button.subtle { color: #86928b; }
+.icon-button.danger { color: #a4473f; }
+.icon-button.danger:hover:not(:disabled) { background: #fff1ef; border-color: #f0d3cf; }
+.icon-button:disabled { cursor: not-allowed; opacity: .45; }
 .button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 8px; padding: 0 13px; border: 1px solid transparent; border-radius: 5px; font-size: 12px; font-weight: 700; transition: transform .16s ease, background .16s ease, border-color .16s ease; }
 .button:hover:not(:disabled) { transform: translateY(-1px); }
 .button-primary { color: #14251f; background: var(--lime); border-color: #b9e45b; }

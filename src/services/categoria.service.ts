@@ -1,6 +1,7 @@
 import { z } from "zod";
 import prisma from '@/lib/prisma';
-import { Prisma } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
+import { AppError } from "@/types";
 
 export const categoriaSchema = z.object({
   id: z.string().optional(),
@@ -13,6 +14,8 @@ export const categoriaSchema = z.object({
 export type Categoria = z.infer<typeof categoriaSchema>;
 
 export class CategoriaService {
+  constructor(private readonly database: Pick<PrismaClient, "categoria"> = prisma) {}
+
   public async getAllCategorias(params: {
     page?: number;
     limit?: number;
@@ -91,7 +94,26 @@ export class CategoriaService {
   }
 
   public async deleteCategoria(id: string): Promise<boolean> {
-    await prisma.categoria.delete({
+    const categoria = await this.database.categoria.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        produtos: { select: { id: true }, take: 1 },
+      },
+    });
+
+    if (!categoria) {
+      throw new AppError("Categoria não encontrada", 404);
+    }
+
+    if (categoria.produtos.length > 0) {
+      throw new AppError(
+        "Categoria possui produtos vinculados e não pode ser excluída",
+        409,
+      );
+    }
+
+    await this.database.categoria.delete({
       where: { id },
     });
     return true;
